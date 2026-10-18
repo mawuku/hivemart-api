@@ -1,0 +1,51 @@
+# CloudBees Unify CI workflow for the hivemart-api component.
+# Builds and pushes a container image, then registers the build artifact so it
+# can be selected in a release manifest.
+#
+# Expects (set as CloudBees properties/secrets):
+#   vars.DOCKER_REGISTRY      e.g. docker.io/yourname
+#   secrets.DOCKER_USERNAME
+#   secrets.DOCKER_PASSWORD
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: build
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    steps:
+      - name: Check out source code
+        uses: cloudbees-io/checkout@v1
+
+      - name: Run unit tests
+        uses: docker://node:20-alpine
+        run: |
+          node --test
+
+      - name: Configure container registry credentials
+        uses: cloudbees-io/configure-oci-credentials@v1
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and publish container image
+        uses: cloudbees-io/kaniko@v1
+        with:
+          dockerfile: Dockerfile
+          context: .
+          destination: ${{ vars.DOCKER_REGISTRY }}/hivemart-api:${{ cloudbees.scm.sha }}
+
+      # Registering the artifact is what makes this build selectable in a
+      # release manifest. Verify inputs against the current docs:
+      # https://docs.cloudbees.com/docs/cloudbees-unify/latest/release-orchestration/how-to-guides/register-and-track-artifacts
+      - name: Register build artifact
+        uses: cloudbees-io/register-build-artifact@v1
+        with:
+          name: hivemart-api
+          version: ${{ cloudbees.scm.sha }}
+          url: docker://${{ vars.DOCKER_REGISTRY }}/hivemart-api:${{ cloudbees.scm.sha }}

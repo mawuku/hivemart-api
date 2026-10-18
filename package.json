@@ -1,0 +1,11 @@
+{
+  "name": "hivemart-api",
+  "version": "1.0.0",
+  "description": "HiveMart product API (sample component for CloudBees Unify Release Orchestration)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  }
+}
